@@ -29,36 +29,40 @@ public class AwsEvidenceProvider implements EvidenceProvider {
     public List<Evidence> collect(CollectRequest request, PlatformInstanceConfig instanceConfig) {
         AwsInstanceConfig awsConfig = (AwsInstanceConfig) instanceConfig;
         Region region = Region.of(awsConfig.getRegion());
-        List<Evidence> evidenceList = new ArrayList<>();
 
         // Create clients with try-with-resources to ensure they are closed
         try (KmsClient kmsClient = KmsClient.builder().region(region).build();
              SecretsManagerClient secretsClient = SecretsManagerClient.builder().region(region).build()) {
 
-            for (String arn : request.getResourceArns()) {
-                String service = parseServiceFromArn(arn);
+            return request.getResourceArns().stream()
+                    .flatMap(arn -> collectAllRulesForArn(request, awsConfig, arn, kmsClient, secretsClient).stream())
+                    .collect(Collectors.toList());
+        }
+    }
 
-                for (String rule : request.getRuleSetFields()) {
-                    try {
-                        switch (service) {
-                            case "kms":
-                                if ("Key Rotation Max".equals(rule)) {
-                                    evidenceList.add(collectKeyRotationEvidence(request, awsConfig, kmsClient, arn));
-                                }
-                                break;
-                            case "secretsmanager":
-                                if ("Secrets Management".equals(rule)) {
-                                    evidenceList.add(collectSecretsManagementEvidence(request, awsConfig, secretsClient, arn));
-                                }
-                                break;
-                            default:
-                                logger.warn("Unsupported service '{}' for ARN '{}'", service, arn);
+    private List<Evidence> collectAllRulesForArn(CollectRequest request, AwsInstanceConfig awsConfig, String arn, KmsClient kmsClient, SecretsManagerClient secretsClient) {
+        List<Evidence> evidenceList = new ArrayList<>();
+        String service = parseServiceFromArn(arn);
+
+        for (String rule : request.getRuleSetFields()) {
+            try {
+                switch (service) {
+                    case "kms":
+                        if ("Key Rotation Max".equals(rule)) {
+                            evidenceList.add(collectKeyRotationEvidence(request, awsConfig, kmsClient, arn));
                         }
-                    } catch (Exception e) {
-                        logger.error("Failed to collect evidence for rule '{}' on ARN '{}': {}", rule, arn, e.getMessage());
-                        evidenceList.add(createErrorEvidence(request, awsConfig, rule, "Failed for ARN " + arn + ": " + e.getMessage()));
-                    }
+                        break;
+                    case "secretsmanager":
+                        if ("Secrets Management".equals(rule)) {
+                            evidenceList.add(collectSecretsManagementEvidence(request, awsConfig, secretsClient, arn));
+                        }
+                        break;
+                    default:
+                        logger.warn("Unsupported service '{}' for ARN '{}'", service, arn);
                 }
+            } catch (Exception e) {
+                logger.error("Failed to collect evidence for rule '{}' on ARN '{}': {}", rule, arn, e.getMessage());
+                evidenceList.add(createErrorEvidence(request, awsConfig, rule, "Failed for ARN " + arn + ": " + e.getMessage()));
             }
         }
         return evidenceList;
