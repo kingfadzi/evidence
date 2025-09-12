@@ -18,7 +18,8 @@ public class EvidenceProviderFactory {
     }
 
     public EvidenceProvider getProvider(String platformName) {
-        EvidenceProvider provider = providerMap.get(platformName);
+        // We only have one provider for now, but this factory is ready for more.
+        EvidenceProvider provider = providerMap.get(platformName.toLowerCase());
         if (provider == null) {
             throw new IllegalArgumentException("No provider found for platform: " + platformName);
         }

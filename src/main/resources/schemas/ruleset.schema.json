@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Compliance RuleSet Schema",
+  "description": "Defines the structure for a set of compliance evidence collection rules.",
+  "type": "object",
+  "properties": {
+    "rules": {
+      "type": "array",
+      "description": "A list of compliance rules.",
+      "items": {
+        "$ref": "#/definitions/rule"
+      }
+    }
+  },
+  "required": ["rules"],
+  "definitions": {
+    "rule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "A unique identifier for the rule."
+        },
+        "name": {
+          "type": "string",
+          "description": "The human-readable name of the rule (e.g., 'Key Rotation Max')."
+        },
+        "platform": {
+          "type": "string",
+          "description": "The platform this rule applies to.",
+          "enum": ["aws", "vmware", "openshift"]
+        },
+        "service": {
+          "type": "string",
+          "description": "The service within the platform (e.g., 'kms', 's3', 'ec2')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief explanation of what the rule checks."
+        },
+        "collection": {
+          "$ref": "#/definitions/collection"
+        },
+        "assessment": {
+          "$ref": "#/definitions/assessment"
+        }
+      },
+      "required": ["id", "name", "platform", "service", "collection"]
+    },
+    "collection": {
+      "type": "object",
+      "description": "Defines how to collect the evidence.",
+      "properties": {
+        "apiCall": {
+          "type": "string",
+          "description": "The name of the SDK method to call (e.g., 'getKeyRotationStatus')."
+        },
+        "parameters": {
+          "type": "object",
+          "description": "A map of parameter names and values for the API call. Values can use variables like ${arn}.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "responseField": {
+          "type": "string",
+          "description": "The path to a single field to extract from the response."
+        },
+        "responseFields": {
+          "type": "array",
+          "description": "A list of fields to extract from the response to build a result object.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["apiCall"]
+    },
+    "assessment": {
+      "type": "object",
+      "description": "Defines how to assess the collected data for compliance.",
+      "properties": {
+        "compliantWhen": {
+          "$ref": "#/definitions/complianceCondition"
+        }
+      },
+      "required": ["compliantWhen"]
+    },
+    "complianceCondition": {
+      "type": "object",
+      "properties": {
+        "equals": {},
+        "notEquals": {},
+        "contains": { "type": "string" },
+        "isTrue": { "type": "boolean" },
+        "isFalse": { "type": "boolean" }
+      },
+      "maxProperties": 1,
+      "minProperties": 1
+    }
+  }
+}
