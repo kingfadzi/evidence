@@ -1,12 +1,17 @@
 compliance-collector:
   platforms:
-    aws:
-      - name: "aws-production-account"
-        region: "us-east-1"
-      - name: "aws-development-account"
-        region: "eu-west-2"
-    vmware:
-      - name: "vcenter-main-dc"
-        url: "https://vcenter1.example.com/sdk"
-      - name: "vcenter-dr-site"
-        url: "https://vcenter2.example.com/sdk"
+    instances:
+      aws:
+        - name: "aws-production-account"
+          properties:
+            region: "us-east-1"
+        - name: "aws-development-account"
+          properties:
+            region: "eu-west-2"
+      vmware:
+        - name: "vcenter-main-dc"
+          properties:
+            url: "https://vcenter1.example.com/sdk"
+        - name: "vcenter-dr-site"
+          properties:
+            url: "https://vcenter2.example.com/sdk"
