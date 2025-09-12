@@ -7,5 +7,6 @@ import java.util.List;
 public class CollectRequest {
     private String applicationId;
     private String platformName;
+    private List<String> resourceArns;
     private List<String> ruleSetFields;
 }
