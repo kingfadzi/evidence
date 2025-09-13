@@ -28,3 +28,28 @@ rules:
         - "arn"
         - "rotationEnabled"
         - "lastChangedDate"
+
+  - id: "aws-s3-bucket-encryption"
+    name: "S3 Bucket Encryption"
+    platform: "aws"
+    service: "s3"
+    description: "Verifies that an S3 bucket has default encryption enabled."
+    collection:
+      apiCall: "getBucketEncryption"
+      parameters:
+        bucket: "${arn.resource}"
+      responseField: "serverSideEncryptionConfiguration.rules[0].applyServerSideEncryptionByDefault.sseAlgorithm"
+    assessment:
+      compliantWhen:
+        equals: "AES256"
+
+  - id: "aws-iam-user-policies"
+    name: "IAM User Policies"
+    platform: "aws"
+    service: "iam"
+    description: "Lists the managed policies attached to an IAM user."
+    collection:
+      apiCall: "listAttachedUserPolicies"
+      parameters:
+        userName: "${arn.resource}"
+      responseField: "attachedPolicies"
