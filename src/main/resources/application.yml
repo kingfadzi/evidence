@@ -15,3 +15,12 @@ compliance-collector:
         - name: "vcenter-dr-site"
           properties:
             url: "https://vcenter2.example.com/sdk"
+      kubernetes:
+        - name: "prod-cluster-eks"
+          properties:
+            kubeconfig: "/path/to/secure/eks.kubeconfig"
+            context: "eks-prod"
+        - name: "dev-cluster-k3s"
+          properties:
+            kubeconfig: "/path/to/secure/k3s.kubeconfig"
+            context: "default"

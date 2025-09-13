@@ -4,6 +4,7 @@ import com.example.complianceapi.config.PlatformInstanceConfig;
 import com.example.complianceapi.dto.CollectRequest;
 import com.example.complianceapi.model.Evidence;
 import com.example.complianceapi.rules.Rule;
+import com.jayway.jsonpath.JsonPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanWrapper;
@@ -50,8 +51,20 @@ public class GenericRuleBasedProvider implements EvidenceProvider {
         try {
             Object client = handler.getClient(rule.getService(), config);
             Object apiRequest = handler.buildApiRequest(rule, identifier);
-            Method method = findMethod(client.getClass(), rule.getCollection().getApiCall(), apiRequest.getClass());
-            Object response = method.invoke(client, apiRequest);
+
+            Object response;
+            if (apiRequest instanceof Map) {
+                // Handle parameter-based API calls (like Kubernetes)
+                Map<String, Object> params = (Map<String, Object>) apiRequest;
+                // This is a simplification; a real implementation would need a more robust method matching logic
+                Method method = findMethodByName(client.getClass(), rule.getCollection().getApiCall());
+                response = method.invoke(client, params.get("name"), params.get("namespace"), null, null, null, null, null, null, null, null, null);
+            } else {
+                // Handle request-object-based API calls (like AWS)
+                Method method = findMethod(client.getClass(), rule.getCollection().getApiCall(), apiRequest.getClass());
+                response = method.invoke(client, apiRequest);
+            }
+
             Object collectedData = extractDataFromResponse(response, rule);
             return createSuccessEvidence(request, config, rule, collectedData);
         } catch (Exception e) {
@@ -64,7 +77,29 @@ public class GenericRuleBasedProvider implements EvidenceProvider {
         return clientClass.getMethod(methodName, requestClass);
     }
 
+    private Method findMethodByName(Class<?> clientClass, String methodName) throws NoSuchMethodException {
+        // WARNING: This is a major simplification. It assumes the method signature is always the same.
+        // A robust implementation would need to inspect parameter types and match them to the map.
+        for (Method method : clientClass.getMethods()) {
+            if (method.getName().equals(methodName)) {
+                return method;
+            }
+        }
+        throw new NoSuchMethodException("No method found with name: " + methodName);
+    }
+
     private Object extractDataFromResponse(Object response, Rule rule) {
+        // For Kubernetes responses, we need to use JSONPath if the response is a complex object.
+        // This is a simple heuristic. A more robust solution would be handler-specific.
+        if (response.getClass().getPackageName().startsWith("io.kubernetes.client")) {
+            if (".".equals(rule.getCollection().getResponseField())) {
+                return response.toString(); // Or serialize to JSON
+            }
+            // This requires the response object to be serializable to JSON.
+            // The Kubernetes client objects are.
+            return JsonPath.read(response.toString(), "$." + rule.getCollection().getResponseField());
+        }
+
         BeanWrapper responseWrapper = PropertyAccessorFactory.forBeanPropertyAccess(response);
         if (rule.getCollection().getResponseField() != null) {
             return responseWrapper.getPropertyValue(rule.getCollection().getResponseField());

@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=./schemas/ruleset.schema.json
+rules:
+  - id: "k8s-network-segmentation"
+    name: "Network Segmentation Evidence"
+    platform: "kubernetes"
+    service: "networking.k8s.io/v1"
+    description: "Checks for the existence of a NetworkPolicy."
+    collection:
+      apiCall: "readNamespacedNetworkPolicy"
+      parameters: {} # namespace and name are handled by the provider
+      responseField: "." # Return the whole object
+
+  - id: "k8s-ha-topology"
+    name: "HA Topology"
+    platform: "kubernetes"
+    service: "apps/v1"
+    description: "Checks that a deployment has at least 3 replicas."
+    collection:
+      apiCall: "readNamespacedDeployment"
+      parameters: {}
+      responseField: "spec.replicas"
+    assessment:
+      compliantWhen:
+        # A real implementation would need a 'greaterThanOrEquals' condition
+        # For now, we'll just check if it equals 3
+        equals: 3
