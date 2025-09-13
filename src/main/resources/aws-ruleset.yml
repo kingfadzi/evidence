@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=./schemas/ruleset.schema.json
+rules:
+  - id: "aws-kms-key-rotation"
+    name: "Key Rotation Max"
+    platform: "aws"
+    service: "kms"
+    description: "Verifies that customer-managed KMS keys have automatic rotation enabled."
+    collection:
+      apiCall: "getKeyRotationStatus"
+      parameters:
+        keyId: "${arn}"
+      responseField: "keyRotationEnabled"
+    assessment:
+      compliantWhen:
+        isTrue: true
+
+  - id: "aws-secret-metadata"
+    name: "Secrets Management"
+    platform: "aws"
+    service: "secretsmanager"
+    description: "Collects metadata about a secret stored in AWS Secrets Manager."
+    collection:
+      apiCall: "describeSecret"
+      parameters:
+        secretId: "${arn}"
+      responseFields:
+        - "name"
+        - "arn"
+        - "rotationEnabled"
+        - "lastChangedDate"
