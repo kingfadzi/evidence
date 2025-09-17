@@ -1,0 +1,114 @@
+# PVC removed - not needed for simple demo app
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: hello-world-pdb
+  namespace: hello-world-app
+  labels:
+    app: hello-world
+    compliance.availability/protected: "true"
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: hello-world
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hello-world-hpa
+  namespace: hello-world-app
+  labels:
+    app: hello-world
+    compliance.availability/auto-scaling: "true"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hello-world-app
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      selectPolicy: Max
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-world-app-code
+  namespace: hello-world-app
+  labels:
+    app: hello-world
+    compliance.integrity/immutable: "true"
+data:
+  package.json: |
+    {
+      "name": "hello-world-compliance-demo",
+      "version": "1.0.0",
+      "description": "Sample Node.js app for compliance evidence collection",
+      "main": "server.js",
+      "scripts": {
+        "start": "node server.js"
+      },
+      "dependencies": {}
+    }
+  server.js: |
+    const http = require('http');
+    const port = process.env.PORT || 8080;
+
+    const server = http.createServer((req, res) => {
+      const url = req.url;
+
+      res.setHeader('Content-Type', 'application/json');
+
+      if (url === '/') {
+        res.writeHead(200);
+        res.end(JSON.stringify({
+          message: 'Hello World - Compliance Demo',
+          environment: process.env.NODE_ENV,
+          timestamp: new Date().toISOString(),
+          version: '1.0.0'
+        }));
+      } else if (url === '/health') {
+        res.writeHead(200);
+        res.end(JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }));
+      } else if (url === '/ready') {
+        res.writeHead(200);
+        res.end(JSON.stringify({ status: 'ready', timestamp: new Date().toISOString() }));
+      } else {
+        res.writeHead(404);
+        res.end(JSON.stringify({ error: 'Not found' }));
+      }
+    });
+
+    server.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
